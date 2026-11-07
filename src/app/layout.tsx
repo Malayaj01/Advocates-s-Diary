@@ -20,6 +20,7 @@ export const metadata: Metadata = {
   description: "Cases, hearing dates and fees — in one diary.",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Diary", statusBarStyle: "default" },
+  icons: { icon: "/icon.svg", apple: "/icons/180" },
 };
 
 export const viewport: Viewport = {

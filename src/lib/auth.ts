@@ -32,7 +32,8 @@ export async function startSession(payload: SessionPayload) {
   store.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    // HTTPS-only in production; set COOKIE_SECURE=false to test over plain http on a LAN.
+    secure: process.env.NODE_ENV === "production" && process.env.COOKIE_SECURE !== "false",
     path: "/",
     maxAge: SESSION_DAYS * 24 * 60 * 60,
   });

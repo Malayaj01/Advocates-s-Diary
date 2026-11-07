@@ -26,7 +26,13 @@ export function HearingRow({ t, caseId, title, court, purpose, done, due, leadin
           </p>
           {meta && <p className="truncate text-[15px] text-ink-soft">{meta}</p>}
         </div>
-        {done ? <Stamp tone="green">{t.done}</Stamp> : due ? <Money amount={due} owed className="text-[17px]" /> : null}
+        {done ? (
+          <Stamp tone="green">{t.done}</Stamp>
+        ) : due === undefined ? null : due > 0 ? (
+          <Money amount={due} owed className="text-[17px]" />
+        ) : (
+          <Stamp tone="green">{t.paid}</Stamp>
+        )}
       </Link>
     </li>
   );

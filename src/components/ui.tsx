@@ -20,7 +20,7 @@ export function PageHeader({
           <ChevronLeft size={28} />
         </Link>
       )}
-      <h1 className="figure min-w-0 flex-1 truncate text-[26px] font-extrabold leading-tight">{title}</h1>
+      <h1 className="figure line-clamp-2 min-w-0 flex-1 text-[26px] font-extrabold leading-tight">{title}</h1>
       {action}
     </header>
   );
@@ -40,7 +40,7 @@ export function Stamp({ children, tone = "ink" }: { children: React.ReactNode; t
 export function DateStamp({ day, month, muted }: { day: number; month: string; muted?: boolean }) {
   return (
     <div
-      className={`grid w-14 shrink-0 place-items-center rounded-sm border-2 py-1 leading-none ${
+      className={`grid h-fit w-14 shrink-0 place-items-center rounded-sm border-2 py-1 leading-none ${
         muted ? "border-rule text-ink-soft" : "border-ink text-ink"
       }`}
     >
