@@ -1,26 +1,125 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+  Advocate's Diary — design tokens.
+  The app borrows from a lawyer's own tools: cream diary paper,
+  blue ink for writing, red ink for money owed, ruled lines for lists.
+*/
+
+@theme {
+  --color-paper: #f6f0e4;
+  --color-paper-deep: #ece3d1;
+  --color-ink: #1d2b4f;
+  --color-ink-soft: #5d6684;
+  --color-ink-faint: #9aa0b2;
+  --color-rule: #d9ccb4;
+  --color-margin: #d98a80;
+  --color-red: #a8322b;
+  --color-green: #2f6b3c;
+
+  --font-sans: var(--font-mukta), system-ui, sans-serif;
+  --font-serif: var(--font-martel), Georgia, serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 18px;
+    line-height: 1.45;
+  }
+
+  /* Money and dates read like a ledger: serif, lined-up digits. */
+  .figure {
+    font-family: var(--font-serif);
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: -0.01em;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-ink) 45%, transparent);
+    outline-offset: 2px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* A diary page: red margin line down the left edge. */
+  .page {
+    position: relative;
+    min-height: 100dvh;
+    padding: 20px 20px 132px 44px;
+  }
+  .page::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 30px;
+    width: 3px;
+    border-left: 1px solid var(--color-margin);
+    border-right: 1px solid var(--color-margin);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  /* Ruled list — each row sits on a printed line. */
+  .ruled > * {
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .ruled > *:first-child {
+    border-top: 1px solid var(--color-rule);
+  }
+
+  /* A writing line: inputs are just a line to write on. */
+  .line-input {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid var(--color-rule);
+    padding: 8px 2px 10px;
+    font-size: 20px;
+    border-radius: 0;
+    transition: border-color 120ms;
+  }
+  .line-input:focus {
+    outline: none;
+    border-bottom-color: var(--color-ink);
+  }
+  .line-input::placeholder {
+    color: var(--color-ink-faint);
+  }
+
+  /* Rubber stamp marks for status. */
+  .stamp {
+    display: inline-block;
+    border: 2px solid currentColor;
+    border-radius: 3px;
+    padding: 0 6px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.6;
+    transform: rotate(-3deg);
+    opacity: 0.88;
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }
