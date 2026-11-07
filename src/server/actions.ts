@@ -16,7 +16,9 @@ import { hasAnyUser } from "./queries";
 // user's role, records an activity line, and redirects back with ?saved=1.
 
 /** Error keys map to entries in the dictionary, so the UI can translate them. */
-export type ActionState = { error?: "required" | "invalidAmount" | "wrongLogin" | "usernameTaken" } | undefined;
+export type ActionState =
+  | { error?: "required" | "invalidAmount" | "wrongLogin" | "usernameTaken" | "passwordShort" | "tooManyAttempts" }
+  | undefined;
 
 // ---------- helpers ----------
 
@@ -31,7 +33,14 @@ const requiredText = z.string().trim().min(1);
 
 const dayKey = z.string().refine(isValidDayKey);
 
-const rupeeAmount = z.coerce.number().int().positive().max(100_000_000);
+/** "₹50,000" / "50 000" -> "50000" */
+const digitsOnly = (v: unknown) => (typeof v === "string" ? v.replace(/\D/g, "") : v);
+
+const rupeeAmount = z.preprocess(digitsOnly, z.coerce.number().int().positive().max(100_000_000));
+
+const MIN_PASSWORD = 6;
+const MAX_FAILED_LOGINS = 5;
+const LOCK_MINUTES = 15;
 
 function form(fd: FormData) {
   return Object.fromEntries(fd.entries()) as Record<string, string>;
@@ -51,8 +60,28 @@ function done(path: string): never {
 export async function login(_: ActionState, fd: FormData): Promise<ActionState> {
   const { username, password } = form(fd);
   const user = await db.user.findUnique({ where: { username: (username ?? "").trim().toLowerCase() } });
-  const ok = user?.active && (await bcrypt.compare(password ?? "", user.passwordHash));
-  if (!user || !ok) return { error: "wrongLogin" };
+  if (!user || !user.active) return { error: "wrongLogin" };
+
+  // After repeated wrong passwords the account is locked for a while.
+  if (user.lockedUntil && user.lockedUntil > new Date()) return { error: "tooManyAttempts" };
+
+  const ok = await bcrypt.compare(password ?? "", user.passwordHash);
+  if (!ok) {
+    const failed = user.failedLogins + 1;
+    const lock = failed >= MAX_FAILED_LOGINS;
+    await db.user.update({
+      where: { id: user.id },
+      data: {
+        failedLogins: lock ? 0 : failed,
+        lockedUntil: lock ? new Date(Date.now() + LOCK_MINUTES * 60_000) : null,
+      },
+    });
+    return { error: lock ? "tooManyAttempts" : "wrongLogin" };
+  }
+
+  if (user.failedLogins || user.lockedUntil) {
+    await db.user.update({ where: { id: user.id }, data: { failedLogins: 0, lockedUntil: null } });
+  }
 
   await startSession({ uid: user.id, name: user.name, role: user.role === "ADMIN" ? "ADMIN" : "JUNIOR" });
   redirect("/");
@@ -62,9 +91,9 @@ export async function login(_: ActionState, fd: FormData): Promise<ActionState> 
 export async function setupAdmin(_: ActionState, fd: FormData): Promise<ActionState> {
   if (await hasAnyUser()) redirect("/login");
 
-  const parsed = z
-    .object({ name: requiredText, username: requiredText, password: z.string().min(6) })
-    .safeParse(form(fd));
+  const data = form(fd);
+  if ((data.password ?? "").length < MIN_PASSWORD) return { error: "passwordShort" };
+  const parsed = z.object({ name: requiredText, username: requiredText, password: z.string() }).safeParse(data);
   if (!parsed.success) return { error: "required" };
 
   const user = await db.user.create({
@@ -125,7 +154,7 @@ const caseSchema = z.object({
   side: z.enum(["PETITIONER", "RESPONDENT"]).nullable().optional().catch(null),
   opposingParty: text,
   status: z.enum(["ACTIVE", "DISPOSED", "ON_HOLD"]).default("ACTIVE"),
-  feeAgreed: z.coerce.number().int().min(0).max(100_000_000).catch(0),
+  feeAgreed: z.preprocess((v) => digitsOnly(v) || "0", z.coerce.number().int().min(0).max(100_000_000)),
   notes: text,
 });
 
@@ -133,7 +162,10 @@ export async function saveCase(_: ActionState, fd: FormData): Promise<ActionStat
   const me = await requireUser();
   const data = form(fd);
   const parsed = caseSchema.safeParse(data);
-  if (!parsed.success) return { error: "required" };
+  if (!parsed.success) {
+    const feeBad = parsed.error.issues.some((i) => i.path[0] === "feeAgreed");
+    return { error: feeBad ? "invalidAmount" : "required" };
+  }
 
   // Either pick an existing client or type a new one's name (+ phone).
   let clientId = data.clientId?.trim();
@@ -144,7 +176,9 @@ export async function saveCase(_: ActionState, fd: FormData): Promise<ActionStat
     await log(me.uid, "CLIENT_ADDED", client.name);
     clientId = client.id;
   }
-  if (!clientId) return { error: "required" };
+  if (!clientId || !(await db.client.findUnique({ where: { id: clientId }, select: { id: true } }))) {
+    return { error: "required" };
+  }
 
   const id = data.id?.trim();
   const saved = id
@@ -174,9 +208,12 @@ export async function addHearing(_: ActionState, fd: FormData): Promise<ActionSt
   if (!parsed.success) return { error: "required" };
 
   const { caseId, date, purpose } = parsed.data;
-  const c = await db.case.findUniqueOrThrow({ where: { id: caseId }, select: { title: true } });
-  await db.hearing.create({ data: { caseId, date: dayFromKey(date), purpose, createdById: me.uid } });
-  await db.case.update({ where: { id: caseId }, data: { updatedAt: new Date() } });
+  const c = await db.case.findUnique({ where: { id: caseId }, select: { title: true } });
+  if (!c) return { error: "required" };
+  await db.$transaction([
+    db.hearing.create({ data: { caseId, date: dayFromKey(date), purpose, createdById: me.uid } }),
+    db.case.update({ where: { id: caseId }, data: { updatedAt: new Date() } }),
+  ]);
 
   await log(me.uid, "HEARING_ADDED", `${c.title} · ${date}`);
   done(`/cases/${caseId}`);
@@ -194,18 +231,25 @@ export async function completeHearing(_: ActionState, fd: FormData): Promise<Act
   if (!parsed.success) return { error: "required" };
 
   const { hearingId, outcome, nextDate, purpose } = parsed.data;
-  const hearing = await db.hearing.update({
-    where: { id: hearingId },
-    data: { done: true, outcome },
-    include: { case: { select: { title: true } } },
-  });
+  const existing = await db.hearing.findUnique({ where: { id: hearingId }, select: { caseId: true, done: true } });
+  if (!existing) return { error: "required" };
+  // Already completed (e.g. opened twice): don't add a second next date.
+  if (existing.done) done(`/cases/${existing.caseId}`);
 
-  if (nextDate) {
-    await db.hearing.create({
-      data: { caseId: hearing.caseId, date: dayFromKey(nextDate), purpose, createdById: me.uid },
+  const hearing = await db.$transaction(async (tx) => {
+    const h = await tx.hearing.update({
+      where: { id: hearingId },
+      data: { done: true, outcome },
+      include: { case: { select: { title: true } } },
     });
-  }
-  await db.case.update({ where: { id: hearing.caseId }, data: { updatedAt: new Date() } });
+    if (nextDate) {
+      await tx.hearing.create({
+        data: { caseId: h.caseId, date: dayFromKey(nextDate), purpose, createdById: me.uid },
+      });
+    }
+    await tx.case.update({ where: { id: h.caseId }, data: { updatedAt: new Date() } });
+    return h;
+  });
 
   await log(me.uid, "HEARING_DONE", `${hearing.case.title}${nextDate ? ` → ${nextDate}` : ""}`);
   done(`/cases/${hearing.caseId}`);
@@ -232,7 +276,6 @@ const paymentSchema = z.object({
 export async function addPayment(_: ActionState, fd: FormData): Promise<ActionState> {
   const me = await requireUser();
   const data = form(fd);
-  data.amount = (data.amount ?? "").replace(/[,\s₹]/g, "");
   const parsed = paymentSchema.safeParse(data);
   if (!parsed.success) {
     const amountBad = parsed.error.issues.some((i) => i.path[0] === "amount");
@@ -240,11 +283,12 @@ export async function addPayment(_: ActionState, fd: FormData): Promise<ActionSt
   }
 
   const { caseId, amount, mode, paidOn, note } = parsed.data;
-  const c = await db.case.findUniqueOrThrow({ where: { id: caseId }, select: { title: true } });
-  await db.payment.create({
-    data: { caseId, amount, mode, paidOn: dayFromKey(paidOn), note, receivedById: me.uid },
-  });
-  await db.case.update({ where: { id: caseId }, data: { updatedAt: new Date() } });
+  const c = await db.case.findUnique({ where: { id: caseId }, select: { title: true } });
+  if (!c) return { error: "required" };
+  await db.$transaction([
+    db.payment.create({ data: { caseId, amount, mode, paidOn: dayFromKey(paidOn), note, receivedById: me.uid } }),
+    db.case.update({ where: { id: caseId }, data: { updatedAt: new Date() } }),
+  ]);
 
   await log(me.uid, "PAYMENT_ADDED", `${rupees(amount)} · ${c.title}`);
   done(`/cases/${caseId}`);
@@ -263,9 +307,9 @@ export async function deletePayment(fd: FormData) {
 
 export async function addJunior(_: ActionState, fd: FormData): Promise<ActionState> {
   const me = await requireAdmin();
-  const parsed = z
-    .object({ name: requiredText, username: requiredText, password: z.string().min(6) })
-    .safeParse(form(fd));
+  const data = form(fd);
+  if ((data.password ?? "").length < MIN_PASSWORD) return { error: "passwordShort" };
+  const parsed = z.object({ name: requiredText, username: requiredText, password: z.string() }).safeParse(data);
   if (!parsed.success) return { error: "required" };
 
   const username = parsed.data.username.toLowerCase();

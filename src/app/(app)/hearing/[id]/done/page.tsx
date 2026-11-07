@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { todayKey } from "@/lib/dates";
 import { getT } from "@/i18n/server";
@@ -14,6 +14,8 @@ export default async function HearingDonePage({ params }: { params: Promise<{ id
     db.hearing.findUnique({ where: { id }, include: { case: { select: { id: true, title: true } } } }),
   ]);
   if (!h) notFound();
+  // Already completed: go back to the case instead of adding another next date.
+  if (h.done) redirect(`/cases/${h.case.id}`);
 
   return (
     <>

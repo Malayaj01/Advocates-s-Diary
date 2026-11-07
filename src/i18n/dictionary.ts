@@ -123,6 +123,12 @@ const hi = {
   required: "ज़रूरी है",
   invalidAmount: "सही रकम डालें",
   usernameTaken: "यह यूज़रनेम पहले से है",
+  passwordShort: "पासवर्ड कम से कम 6 अक्षर का हो",
+  tooManyAttempts: "बहुत बार गलत पासवर्ड। 15 मिनट बाद कोशिश करें",
+  errorTitle: "कुछ गड़बड़ हो गई",
+  tryAgain: "फिर से कोशिश करें",
+  notFound: "यह पेज नहीं मिला",
+  goHome: "होम पर जाएँ",
 };
 
 export type Dictionary = typeof hi;
@@ -243,6 +249,12 @@ const en: Dictionary = {
   required: "Required",
   invalidAmount: "Enter a valid amount",
   usernameTaken: "Username already taken",
+  passwordShort: "Password must be at least 6 characters",
+  tooManyAttempts: "Too many wrong attempts. Try again in 15 minutes",
+  errorTitle: "Something went wrong",
+  tryAgain: "Try again",
+  notFound: "Page not found",
+  goHome: "Go home",
 };
 
 export const dictionaries = { hi, en };

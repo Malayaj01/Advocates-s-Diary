@@ -7,6 +7,13 @@ import { addDays, startOfMonth, today } from "@/lib/dates";
 
 export type CaseFilter = "all" | "active" | "due" | "disposed";
 
+const isPostgres = (process.env.DATABASE_URL ?? "").startsWith("postgres");
+
+/** Case-insensitive "contains" filter that works on both SQLite and Postgres. */
+function like(term: string) {
+  return isPostgres ? { contains: term, mode: "insensitive" as const } : { contains: term };
+}
+
 /** Sum of payments per case, as a Map<caseId, rupees>. */
 async function paidByCase(caseIds?: string[]) {
   const rows = await db.payment.groupBy({
@@ -47,7 +54,7 @@ export async function getHomeData() {
   ]);
   const withDue = hearings.map((h) => ({
     ...h,
-    due: dueOf(h.case.feeAgreed, paid.get(h.caseId) ?? 0),
+    due: h.case.feeAgreed > 0 ? dueOf(h.case.feeAgreed, paid.get(h.caseId) ?? 0) : undefined,
   }));
 
   return {
@@ -81,10 +88,10 @@ export async function listCases({ q = "", filter = "active" }: { q?: string; fil
       ...(term
         ? {
             OR: [
-              { title: { contains: term } },
-              { caseNumber: { contains: term } },
-              { opposingParty: { contains: term } },
-              { client: { name: { contains: term } } },
+              { title: like(term) },
+              { caseNumber: like(term) },
+              { opposingParty: like(term) },
+              { client: { name: like(term) } },
             ],
           }
         : {}),
@@ -105,6 +112,7 @@ export async function listCases({ q = "", filter = "active" }: { q?: string; fil
     status: c.status,
     clientName: c.client.name,
     nextDate: c.hearings[0]?.date ?? null,
+    fee: c.feeAgreed,
     due: dueOf(c.feeAgreed, paid.get(c.id) ?? 0),
   }));
 
@@ -124,7 +132,7 @@ export async function getCase(id: string) {
 
   const paid = c.payments.reduce((s, p) => s + p.amount, 0);
   const day = today();
-  const upcoming = c.hearings.filter((h) => h.date >= day).sort((a, b) => +a.date - +b.date);
+  const upcoming = c.hearings.filter((h) => h.date >= day && !h.done).sort((a, b) => +a.date - +b.date);
 
   return {
     ...c,
@@ -174,7 +182,7 @@ export async function getDatesData() {
 export async function listClients(q = "") {
   const term = q.trim();
   const clients = await db.client.findMany({
-    where: term ? { OR: [{ name: { contains: term } }, { phone: { contains: term } }] } : undefined,
+    where: term ? { OR: [{ name: like(term) }, { phone: like(term) }] } : undefined,
     orderBy: { name: "asc" },
     include: { cases: { select: { id: true, feeAgreed: true, status: true } } },
   });
@@ -206,6 +214,7 @@ export async function getClient(id: string) {
     status: c.status,
     clientName: client.name,
     nextDate: c.hearings[0]?.date ?? null,
+    fee: c.feeAgreed,
     due: dueOf(c.feeAgreed, paid.get(c.id) ?? 0),
   }));
   return { client, cases: rows, totalDue: rows.reduce((s, r) => s + r.due, 0) };

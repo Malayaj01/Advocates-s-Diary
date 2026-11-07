@@ -11,6 +11,7 @@ export type CaseRowData = {
   status: string;
   clientName: string;
   nextDate: Date | null;
+  fee: number;
   due: number;
 };
 
@@ -31,9 +32,9 @@ export function CaseRow({ c, t, lang, href }: { c: CaseRowData; t: Dictionary; l
           <Stamp>{t.statuses.DISPOSED}</Stamp>
         ) : c.due > 0 ? (
           <Money amount={c.due} owed className="text-[18px]" />
-        ) : (
+        ) : c.fee > 0 ? (
           <Stamp tone="green">{t.paid}</Stamp>
-        )}
+        ) : null}
       </Link>
     </li>
   );

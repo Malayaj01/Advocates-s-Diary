@@ -1,17 +1,18 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "./db";
 import { SESSION_COOKIE, SESSION_DAYS, signSession, verifySession, type SessionPayload } from "./session";
 
-export async function getSession(): Promise<SessionPayload | null> {
+export const getSession = cache(async (): Promise<SessionPayload | null> => {
   const store = await cookies();
   const session = await verifySession(store.get(SESSION_COOKIE)?.value);
   if (!session) return null;
   // A deactivated user loses access immediately.
   const user = await db.user.findUnique({ where: { id: session.uid }, select: { active: true } });
   return user?.active ? session : null;
-}
+});
 
 /** For pages and actions: returns the user or sends them to login. */
 export async function requireUser(): Promise<SessionPayload> {
