@@ -1,0 +1,113 @@
+// Advocate's Diary — data model
+// Money is stored as whole rupees (Int). Hearing/payment dates are stored
+// as UTC midnight of the calendar day (see src/lib/dates.ts).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  username     String   @unique
+  passwordHash String
+  role         String   @default("JUNIOR") // ADMIN | JUNIOR
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  payments   Payment[]
+  hearings   Hearing[]
+  activities Activity[]
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  altPhone  String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cases Case[]
+
+  @@index([name])
+}
+
+model Case {
+  id            String    @id @default(cuid())
+  title         String // e.g. "Ram Kumar vs State"
+  caseNumber    String? // e.g. "CS 245/2024"
+  cnr           String?
+  court         String?
+  caseType      String    @default("CIVIL") // CIVIL | CRIMINAL | FAMILY | REVENUE | CONSUMER | OTHER
+  side          String? // PETITIONER | RESPONDENT
+  opposingParty String?
+  status        String    @default("ACTIVE") // ACTIVE | DISPOSED | ON_HOLD
+  feeAgreed     Int       @default(0)
+  filedOn       DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  hearings Hearing[]
+  payments Payment[]
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model Hearing {
+  id        String   @id @default(cuid())
+  date      DateTime
+  purpose   String?
+  outcome   String?
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  caseId      String
+  case        Case    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  createdById String?
+  createdBy   User?   @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([date])
+  @@index([caseId])
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  amount    Int
+  mode      String   @default("CASH") // CASH | UPI | CHEQUE | BANK
+  paidOn    DateTime
+  note      String?
+  createdAt DateTime @default(now())
+
+  caseId       String
+  case         Case    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  receivedById String?
+  receivedBy   User?   @relation(fields: [receivedById], references: [id], onDelete: SetNull)
+
+  @@index([caseId])
+  @@index([paidOn])
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  action    String // e.g. PAYMENT_ADDED
+  detail    String
+  createdAt DateTime @default(now())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
