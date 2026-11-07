@@ -147,6 +147,46 @@ export function DateInput({
   );
 }
 
+/** Text input with tap-to-fill common words, so he rarely has to type. */
+export function SuggestInput({
+  name,
+  suggestions,
+  placeholder,
+  defaultValue = "",
+}: {
+  name: string;
+  suggestions: string[];
+  placeholder?: string;
+  defaultValue?: string;
+}) {
+  const [value, setValue] = useState(defaultValue);
+  return (
+    <div>
+      <input
+        name={name}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={placeholder}
+        className="line-input"
+      />
+      <div className="mt-3 flex flex-wrap gap-2">
+        {suggestions.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setValue(s)}
+            className={`rounded-md border-2 px-3 py-1.5 text-[16px] ${
+              value === s ? "border-ink bg-ink text-paper" : "border-rule"
+            }`}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** Live search that keeps the query in the URL (?q=). */
 export function SearchBox({ placeholder }: { placeholder: string }) {
   const router = useRouter();
