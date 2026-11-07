@@ -98,5 +98,9 @@ export function SectionTitle({ children, right }: { children: React.ReactNode; r
 }
 
 export function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="py-6 text-[18px] text-ink-faint">{children}</p>;
+  return (
+    <p className="rounded-2xl border border-dashed border-rule px-4 py-5 text-center text-[17px] text-ink-faint">
+      {children}
+    </p>
+  );
 }

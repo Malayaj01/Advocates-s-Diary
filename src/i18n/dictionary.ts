@@ -3,6 +3,9 @@
 
 const hi = {
   appName: "वकील डायरी",
+  hello: "नमस्ते",
+  activeCases: "चालू केस",
+  casesNeedUpdate: "केस में अगली तारीख डालनी है",
   today: "आज",
   tomorrow: "कल",
   due: "बकाया",
@@ -126,6 +129,9 @@ export type Dictionary = typeof hi;
 
 const en: Dictionary = {
   appName: "Advocate's Diary",
+  hello: "Namaste",
+  activeCases: "Active cases",
+  casesNeedUpdate: "cases need a next date",
   today: "Today",
   tomorrow: "Tomorrow",
   due: "Due",

@@ -15,7 +15,7 @@ export async function CasePicker({ q, hrefFor }: { q: string; hrefFor: (caseId: 
         <SearchBox placeholder={t.searchCases} />
       </Suspense>
       {cases.length ? (
-        <ul className="ruled mt-4">
+        <ul className="card-list mt-4">
           {cases.map((c) => (
             <CaseRow key={c.id} c={c} t={t} lang={lang} href={hrefFor(c.id)} />
           ))}

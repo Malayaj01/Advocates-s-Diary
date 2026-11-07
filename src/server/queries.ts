@@ -21,6 +21,11 @@ function dueOf(feeAgreed: number, paid: number) {
   return Math.max(feeAgreed - paid, 0);
 }
 
+/** Active cases whose last hearing has passed and no next date is set. */
+function staleCaseWhere(day: Date) {
+  return { status: "ACTIVE", hearings: { some: {}, none: { date: { gte: day } } } };
+}
+
 // ---------- Home ----------
 
 export async function getHomeData() {
@@ -35,7 +40,11 @@ export async function getHomeData() {
     },
   });
 
-  const paid = await paidByCase([...new Set(hearings.map((h) => h.caseId))]);
+  const [paid, needsUpdateCount, activeCount] = await Promise.all([
+    paidByCase([...new Set(hearings.map((h) => h.caseId))]),
+    db.case.count({ where: staleCaseWhere(day) }),
+    db.case.count({ where: { status: "ACTIVE" } }),
+  ]);
   const withDue = hearings.map((h) => ({
     ...h,
     due: dueOf(h.case.feeAgreed, paid.get(h.caseId) ?? 0),
@@ -43,6 +52,8 @@ export async function getHomeData() {
 
   return {
     day,
+    needsUpdateCount,
+    activeCount,
     todayHearings: withDue.filter((h) => h.date < tomorrow),
     tomorrowHearings: withDue.filter((h) => h.date >= tomorrow),
   };
@@ -140,12 +151,8 @@ export async function getDatesData() {
     include: { case: { select: { id: true, title: true, court: true } } },
   });
 
-  // Active cases whose last hearing has passed and no next date is set.
   const stale = await db.case.findMany({
-    where: {
-      status: "ACTIVE",
-      hearings: { some: {}, none: { date: { gte: day } } },
-    },
+    where: staleCaseWhere(day),
     include: { hearings: { orderBy: { date: "desc" }, take: 1, select: { id: true, date: true } } },
     orderBy: { updatedAt: "asc" },
   });

@@ -19,7 +19,7 @@ export default async function MorePage() {
       <PageHeader title={me.name} />
       <p className="-mt-4 mb-6 text-ink-soft">{isAdmin ? t.admin : t.junior}</p>
 
-      <div className="flex items-center justify-between border-y border-rule py-4">
+      <div className="card flex items-center justify-between p-4">
         <span className="text-[19px] font-bold">{t.language}</span>
         <LanguageSwitch />
       </div>
@@ -27,7 +27,7 @@ export default async function MorePage() {
       {isAdmin && (
         <>
           <SectionTitle>{t.team}</SectionTitle>
-          <ul className="ruled">
+          <ul className="card-list">
             {users.map((u) => (
               <li key={u.id} className="flex items-center gap-3 py-3">
                 <div className="min-w-0 flex-1">
@@ -53,7 +53,7 @@ export default async function MorePage() {
 
           <SectionTitle>{t.activity}</SectionTitle>
           {activity.length ? (
-            <ul className="ruled">
+            <ul className="card-list">
               {activity.map((a) => (
                 <li key={a.id} className="py-2.5">
                   <p className="text-[16px]">{a.detail}</p>

@@ -30,14 +30,14 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         <ContactButtons phone={client.phone} t={t} />
       </div>
 
-      <div className="mt-6 flex items-baseline justify-between border-y-2 border-ink py-3">
+      <div className="card mt-5 flex items-baseline justify-between p-4">
         <span className="text-[14px] font-bold uppercase tracking-wider text-ink-soft">{t.totalDue}</span>
         <Money amount={totalDue} owed={totalDue > 0} className="text-[26px]" />
       </div>
 
       <SectionTitle>{t.cases}</SectionTitle>
       {cases.length ? (
-        <ul className="ruled">
+        <ul className="card-list">
           {cases.map((c) => (
             <CaseRow key={c.id} c={c} t={t} lang={lang} />
           ))}

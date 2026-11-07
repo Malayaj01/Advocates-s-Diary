@@ -50,7 +50,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       </div>
 
       {/* Fee ledger */}
-      <section className="mt-6 border-y-2 border-ink py-4">
+      <section className="card mt-5 p-4">
         <dl className="grid grid-cols-3 text-center">
           <div>
             <dt className="text-[13px] font-bold uppercase tracking-wider text-ink-soft">{t.fee}</dt>
@@ -73,11 +73,11 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       </section>
 
       {/* Next date */}
-      <section className="mt-6">
+      <section className="mt-4">
         {pending ? (
           <Link
             href={`/hearing/${pending.id}/done`}
-            className="flex items-center gap-4 rounded-md border-2 border-red p-3 active:bg-paper-deep"
+            className="flex items-center gap-4 rounded-2xl border-2 border-red/40 bg-red/5 p-4 active:bg-red/10"
           >
             <DateStamp day={pending.date.getUTCDate()} month={monthShort(pending.date, lang)} muted />
             <div className="flex-1">
@@ -86,7 +86,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
             </div>
           </Link>
         ) : c.nextHearing ? (
-          <div className="flex items-center gap-4">
+          <div className="card flex items-center gap-4 p-4">
             <DateStamp day={c.nextHearing.date.getUTCDate()} month={monthShort(c.nextHearing.date, lang)} />
             <div className="min-w-0 flex-1">
               <p className="text-[14px] font-bold uppercase tracking-wider text-ink-soft">{t.nextDate}</p>
@@ -97,7 +97,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
             </Link>
           </div>
         ) : (
-          <p className="text-[18px] text-ink-faint">{t.noNextDate}</p>
+          <p className="rounded-2xl border border-dashed border-rule px-4 py-4 text-center text-[17px] text-ink-faint">{t.noNextDate}</p>
         )}
       </section>
 
@@ -116,7 +116,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       {/* Payments */}
       <SectionTitle>{t.payments}</SectionTitle>
       {c.payments.length ? (
-        <ul className="ruled">
+        <ul className="card-list">
           {c.payments.map((p) => (
             <li key={p.id} className="flex items-center gap-3 py-3">
               <div className="min-w-0 flex-1">
@@ -146,7 +146,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
       {/* Hearing history */}
       <SectionTitle>{t.hearings}</SectionTitle>
       {c.hearings.length ? (
-        <ul className="ruled">
+        <ul className="card-list">
           {c.hearings.map((h) => (
             <li key={h.id} className="flex items-center gap-3 py-3">
               <DateStamp day={h.date.getUTCDate()} month={monthShort(h.date, lang)} muted={h.date < day} />

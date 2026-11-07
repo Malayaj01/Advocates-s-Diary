@@ -3,17 +3,17 @@
 /*
   Advocate's Diary — design tokens.
   The app borrows from a lawyer's own tools: cream diary paper,
-  blue ink for writing, red ink for money owed, ruled lines for lists.
+  blue ink for writing, red ink for money owed, warm white cards.
 */
 
 @theme {
   --color-paper: #f6f0e4;
   --color-paper-deep: #ece3d1;
+  --color-card: #fffcf6;
   --color-ink: #1d2b4f;
   --color-ink-soft: #5d6684;
   --color-ink-faint: #9aa0b2;
   --color-rule: #d9ccb4;
-  --color-margin: #d98a80;
   --color-red: #a8322b;
   --color-green: #2f6b3c;
 
@@ -56,29 +56,44 @@
 }
 
 @layer components {
-  /* A diary page: red margin line down the left edge. */
   .page {
-    position: relative;
     min-height: 100dvh;
-    padding: 20px 20px 132px 44px;
-  }
-  .page::before {
-    content: "";
-    position: absolute;
-    inset: 0 auto 0 30px;
-    width: 3px;
-    border-left: 1px solid var(--color-margin);
-    border-right: 1px solid var(--color-margin);
-    opacity: 0.55;
-    pointer-events: none;
+    padding: 20px 16px 132px;
   }
 
-  /* Ruled list — each row sits on a printed line. */
-  .ruled > * {
-    border-bottom: 1px solid var(--color-rule);
+  /* Cards: warm white sheets on the cream page. */
+  .card,
+  .card-list {
+    background: var(--color-card);
+    border: 1px solid var(--color-rule);
+    border-radius: 16px;
+    box-shadow:
+      0 1px 0 rgb(29 43 79 / 0.03),
+      0 6px 16px -10px rgb(29 43 79 / 0.25);
   }
-  .ruled > *:first-child {
+
+  /* A card holding a list: rows separated by thin dividers. */
+  .card-list {
+    overflow: hidden;
+  }
+  .card-list > li {
+    padding-inline: 16px;
+  }
+  .card-list > li + li {
     border-top: 1px solid var(--color-rule);
+  }
+  .card-list > li:has(> a) {
+    padding-inline: 0;
+  }
+  .card-list > li > a {
+    padding-inline: 16px;
+  }
+
+  /* Skeleton placeholder while a screen loads. */
+  .skeleton {
+    background: var(--color-paper-deep);
+    border-radius: 10px;
+    animation: pulse 1.2s ease-in-out infinite;
   }
 
   /* A writing line: inputs are just a line to write on. */
@@ -114,6 +129,12 @@
     transform: rotate(-3deg);
     opacity: 0.88;
     white-space: nowrap;
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
   }
 }
 

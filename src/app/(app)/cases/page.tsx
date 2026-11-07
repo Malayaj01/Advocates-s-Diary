@@ -54,7 +54,7 @@ export default async function CasesPage({
       </nav>
 
       {cases.length ? (
-        <ul className="ruled mt-3">
+        <ul className="card-list mt-3">
           {cases.map((c) => (
             <CaseRow key={c.id} c={c} t={t} lang={lang} />
           ))}

@@ -30,7 +30,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
       </Suspense>
 
       {clients.length ? (
-        <ul className="ruled mt-4">
+        <ul className="card-list mt-4">
           {clients.map((c) => (
             <li key={c.id}>
               <Link href={`/clients/${c.id}`} className="flex items-center gap-3 py-3.5 active:bg-paper-deep">
